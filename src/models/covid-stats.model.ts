@@ -18,6 +18,7 @@ export class ActiveCaseModel {
   Lon: string
   Province: string
   Recovered: number
+  New: number
 }
 
 export interface Period {

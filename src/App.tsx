@@ -58,8 +58,8 @@ class App extends React.Component {
       this.isFetchingStats = true
     })
     const period: Period = {
-      from: moment().clone().subtract(5, 'day').format(REQUEST_DATE_FORMAT),
-      to: moment().clone().format(REQUEST_DATE_FORMAT)
+      from: moment().utc().subtract(5, 'day').format(REQUEST_DATE_FORMAT),
+      to: moment().utc().format(REQUEST_DATE_FORMAT)
     }
     this.casesByCountry = await CovidStatsService.activeCases(country, period)
     this.setDocumentTitle(this.selectedCountry)
@@ -70,21 +70,35 @@ class App extends React.Component {
   }
 
   get mostRecoveredCase(): { count: number, date: string } {
+    const cases = this.aggregated
 
-    if (!this.casesByCountry.length) {
+    if (!cases.length) {
       return {
         count: 0,
         date: ''
       }
     }
 
-    const count = Math.max(...this.casesByCountry.map(t => t.Recovered))
-    const foundedCase = this.casesByCountry.find(t => t.Recovered === count)
+    const count = Math.max(...cases.map(t => t.Recovered))
+    const foundedCase = cases.find(t => t.Recovered === count)
 
     return {
       count,
       date: foundedCase ? moment(foundedCase.Date).format(DATE_FORMAT) : ''
     }
+  }
+
+  get aggregated(): ActiveCaseModel[] {
+    return this.casesByCountry.slice().reverse().reduce((prev: ActiveCaseModel[], next, index, array) => {
+      let New: number = 0
+      if (array[index + 1]) {
+        New = Math.abs(array[index].Confirmed - array[index + 1].Confirmed)
+      }
+      prev.push({
+        ...next, New: New
+      })
+      return prev;
+    }, [])
   }
 
   render() {
@@ -107,19 +121,20 @@ class App extends React.Component {
 
         <div className='App__main'>
           <div className='App__content'>
-            {this.casesByCountry.slice().reverse().map(activeCase => (
-              <div key={activeCase.Date} className='App__active_case'>
+            {this.aggregated.map((activeCase, index) => (
+              <div key={index} className='App__active_case'>
                 <div>
                   <p className='date'>{moment(activeCase.Date).format(DATE_FORMAT)}</p>
                 </div>
                 <div>
                   <div className='block'>
-                    <p className='section'><b>Active</b><span>{activeCase.Active}</span></p>
-                    <p className='section'><b>Deaths</b><span>{activeCase.Deaths}</span></p>
+                    <p className='section'>New<span>{activeCase.New}</span></p>
+                    <p className='section'>Active<span>{activeCase.Active}</span></p>
+                    <p className='section'>Deaths<span>{activeCase.Deaths}</span></p>
                   </div>
                   <div className='block'>
-                    <p className='section'><b>Confirmed</b><span>{activeCase.Confirmed}</span></p>
-                    <p className='section'><b>Recovered</b><span>{activeCase.Recovered}</span></p>
+                    <p className='section'>Confirmed<span>{activeCase.Confirmed}</span></p>
+                    <p className='section'>Recovered<span>{activeCase.Recovered}</span></p>
                   </div>
                 </div>
               </div>

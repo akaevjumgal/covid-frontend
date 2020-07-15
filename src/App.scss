@@ -27,11 +27,11 @@ body {
       }
 
       .count {
-        font-size: 60px;
+        font-size: 80px;
         display: flex;
         align-items: center;
         justify-content: center;
-        height: calc(450px - 206px);
+        height: calc(450px - 236px);
       }
     }
   }
@@ -59,11 +59,13 @@ body {
 
     .date {
       font-weight: 600;
-      font-size: 20px;
+      font-size: 22px;
+      margin-left: 20px;
     }
 
     .block {
       display: flex;
+      justify-content: flex-end;
     }
 
     .section {
