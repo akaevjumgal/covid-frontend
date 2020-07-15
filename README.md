@@ -1,3 +1,5 @@
+#Covid Stats - project is serving on https://akaev.jumgal.github.io/covid-frontend
+
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
 
 ## Available Scripts
