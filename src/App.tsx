@@ -30,11 +30,15 @@ class App extends React.Component {
       const defaultCountry = this.countries.find(c => c.Slug === DEFAULT_SLUG)
 
       if (defaultCountry) {
-        this.selectedCountry = defaultCountry.Slug
+        this.selectedCountry = window.localStorage.getItem('country') || defaultCountry.Slug
         this.fetchStatsByCountry(this.selectedCountry)
         this.fetchTotalByCountryAndStatus(this.selectedCountry, ActiveCaseStatus.recovered)
       }
     })
+  }
+
+  setDocumentTitle = (country: string) => {
+    document.title = `Stats for ${country}`
   }
 
   fetchStatsByCountry = async (country: string) => {
@@ -43,6 +47,8 @@ class App extends React.Component {
       to: moment().clone().format('YYYY-MM-DDT[00:00:00Z]')
     }
     this.casesByCountry = await CovidStatsService.activeCases(country, period)
+    this.setDocumentTitle(this.selectedCountry)
+    window.localStorage.setItem('country', this.selectedCountry)
   }
 
   fetchTotalByCountryAndStatus = async (country: string, status: ActiveCaseStatus) => {

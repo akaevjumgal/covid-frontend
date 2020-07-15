@@ -18,6 +18,10 @@ body {
       color: white;
       text-align: center;
 
+      hr {
+        width: 80%;
+      }
+
       .title {
         font-size: 20px;
       }
@@ -38,7 +42,8 @@ body {
   }
   &__select_country {
     height: 40px;
-    padding: 0px 10px;
+    padding: 0 10px;
+    font-weight: 600;
   }
   &__active_case {
     display: flex;
