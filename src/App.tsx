@@ -1,6 +1,6 @@
 import React, {ChangeEvent} from 'react'
 import './App.scss'
-import {ActiveCaseModel, ActiveCaseStatus, CountryModel, Period, TotalByDay} from './models/covid-stats.model'
+import {ActiveCaseModel, CountryModel, Period} from './models/covid-stats.model'
 import CovidStatsService from './services/covid-stats.service'
 import {action, observable, runInAction} from 'mobx'
 import {observer} from 'mobx-react'
@@ -8,6 +8,8 @@ import moment from 'moment'
 
 const DEFAULT_SLUG = 'kyrgyzstan'
 const DATE_FORMAT = 'DD MMMM'
+const REQUEST_DATE_FORMAT = 'YYYY-MM-DDT[00:00:00Z]'
+const STORAGE_KEY = 'country'
 
 @observer
 class App extends React.Component {
@@ -22,50 +24,62 @@ class App extends React.Component {
   private casesByCountry: ActiveCaseModel[] = []
 
   @observable
-  private totalByDay: TotalByDay[] = []
+  private loading: boolean = false
 
-  componentDidMount() {
-    runInAction(async () => {
-      this.countries = await CovidStatsService.countries()
-      const defaultCountry = this.countries.find(c => c.Slug === DEFAULT_SLUG)
+  @observable
+  private isFetchingStats: boolean = false
 
-      if (defaultCountry) {
-        this.selectedCountry = window.localStorage.getItem('country') || defaultCountry.Slug
-        this.fetchStatsByCountry(this.selectedCountry)
-        this.fetchTotalByCountryAndStatus(this.selectedCountry, ActiveCaseStatus.recovered)
-      }
-    })
+  async componentDidMount() {
+    await this.fetchCountries()
+    const defaultCountry = this.countries.find(c => c.Slug === DEFAULT_SLUG)
+
+    if (defaultCountry) {
+      this.selectedCountry = window.localStorage.getItem(STORAGE_KEY) || defaultCountry.Slug
+      this.fetchStatsByCountry(this.selectedCountry)
+    }
   }
 
   setDocumentTitle = (country: string) => {
     document.title = `Stats for ${country}`
   }
 
+  async fetchCountries() {
+    runInAction(() => {
+      this.loading = true
+    })
+    this.countries = await CovidStatsService.countries()
+    runInAction(() => {
+      this.loading = false
+    })
+  }
+
   fetchStatsByCountry = async (country: string) => {
+    runInAction(() => {
+      this.isFetchingStats = true
+    })
     const period: Period = {
-      from: moment().clone().subtract(5, 'day').format('YYYY-MM-DDT[00:00:00Z]'),
-      to: moment().clone().format('YYYY-MM-DDT[00:00:00Z]')
+      from: moment().clone().subtract(5, 'day').format(REQUEST_DATE_FORMAT),
+      to: moment().clone().format(REQUEST_DATE_FORMAT)
     }
     this.casesByCountry = await CovidStatsService.activeCases(country, period)
     this.setDocumentTitle(this.selectedCountry)
-    window.localStorage.setItem('country', this.selectedCountry)
-  }
-
-  fetchTotalByCountryAndStatus = async (country: string, status: ActiveCaseStatus) => {
-    this.totalByDay = await CovidStatsService.totalByCountryAndStatus(country, status)
+    window.localStorage.setItem(STORAGE_KEY, this.selectedCountry)
+    runInAction(() => {
+      this.isFetchingStats = false
+    })
   }
 
   get mostRecoveredCase(): { count: number, date: string } {
 
-    if (!this.totalByDay.length) {
+    if (!this.casesByCountry.length) {
       return {
         count: 0,
         date: ''
       }
     }
 
-    const count = Math.max(...this.totalByDay.map(t => t.Cases))
-    const foundedCase = this.totalByDay.find(t => t.Cases === count)
+    const count = Math.max(...this.casesByCountry.map(t => t.Recovered))
+    const foundedCase = this.casesByCountry.find(t => t.Recovered === count)
 
     return {
       count,
@@ -74,6 +88,12 @@ class App extends React.Component {
   }
 
   render() {
+
+    if (this.loading) {
+      return (
+        <div className='overlay'><div className='loader'>Loading...</div></div>
+      )
+    }
 
     return (
       <div className="App">
@@ -104,10 +124,13 @@ class App extends React.Component {
                 </div>
               </div>
             ))}
+            {this.isFetchingStats && (
+              <div className='loader'>Loading...</div>
+            )}
             {!this.casesByCountry.length && (
-              <div>
-                NO DATA FOR {this.selectedCountry.toUpperCase()}
-              </div>
+              <h3 className='no_data'>
+                No cases! Hooray!
+              </h3>
             )}
           </div>
           <div className='total'>
@@ -122,11 +145,10 @@ class App extends React.Component {
   }
 
   @action
-  onSelectCountry = async (event: ChangeEvent<HTMLSelectElement>) => {
+  onSelectCountry = (event: ChangeEvent<HTMLSelectElement>) => {
     event.persist()
     this.selectedCountry = event.target.value
     this.fetchStatsByCountry(this.selectedCountry)
-    this.fetchTotalByCountryAndStatus(this.selectedCountry, ActiveCaseStatus.recovered)
   }
 }
 

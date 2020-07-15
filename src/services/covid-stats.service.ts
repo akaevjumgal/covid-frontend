@@ -1,4 +1,4 @@
-import {ActiveCaseModel, ActiveCaseStatus, CountryModel, Period, TotalByDay} from '../models/covid-stats.model'
+import {ActiveCaseModel, CountryModel, Period} from '../models/covid-stats.model'
 
 class CovidStatsService {
   private readonly path = 'https://api.covid19api.com'
@@ -17,11 +17,6 @@ class CovidStatsService {
         method: 'get'
       }
     )
-    return await response.json()
-  }
-
-  async totalByCountryAndStatus(country: string, status: ActiveCaseStatus): Promise<TotalByDay[]> {
-    const response = await fetch(`${this.path}/total/dayone/country/${country}/status/${status}`)
     return await response.json()
   }
 }
